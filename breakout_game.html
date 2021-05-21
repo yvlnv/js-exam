@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        main {
+            position: relative;
+            height: 600px;
+            width: 600px;
+            border: 2px solid green;
+        }
+
+        #playerBoard {
+            position: relative;
+            border: 2px solid green;
+            height: 100px;
+            width: 400px;
+            text-align: center;
+        }
+
+        #ball {
+            top: 140px;
+            height: 26px;
+            width: 26px;
+            border-radius: 13px;
+            position: absolute;
+            left: 287px;
+            background-color: green;
+        }
+
+        #paddle {
+            position: absolute;
+            bottom: 32px;
+            height: 16px;
+            width: 72px;
+            left: 50%;
+            background-color: darkslateblue;
+        }
+
+        .block {
+            position: absolute;
+            height: 20px;
+            width: 96px;
+            background-color: darkslateblue;
+        }
+    </style>
+</head>
+
+<body onmousemove="onPaddleMove(event)"
+    style="display: flex;justify-content: center;align-items: center;flex-direction: column;padding-top: 100px;height: 100%;">
+    <div id="playerBoard">
+        <p style="text-align: center;">Welcome to Breakout game!</p>
+        <form onsubmit="submitForm(event, this);">
+            <label for="player">Enter you name:</label>
+            <input name="player" required class="form-control" />
+            <br>
+            <label for="difficulty">Select difficulty:</label>
+            <select name="difficulty" class="dropdown">
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+            <button>Submit</button>
+        </form>
+    </div>
+    <main id="main">
+        <div id="ball"></div>
+        <div id="paddle"></div>
+    </main>
+    <script>
+        let blocks = []
+        for (j = 0; j < 3; j++) {
+            for (i = 0; i < 5; i++) {
+                x = 20 * (i + 1) + (96 * i)
+                y = 20 + j * 40
+                block = [x, y]
+                blocks.push(block)
+                document.getElementById('main').innerHTML += '<div class="block" style="top:' + y + 'px; left:' + x + 'px"></div>'
+            }
+        }
+
+        const paddle = document.getElementById('paddle');
+        const paddle_width = paddle.style.width
+        const ball = document.getElementById('ball');
+        let tick = ""
+        let player_html = ""
+
+        // moving right = x is positive
+        let xdir = true
+        // moving down = y is positive
+        let ydir = true
+        let counter = 0
+
+        function submitForm(event, form) {
+            event.preventDefault()
+            const formData = new FormData(form)
+            const player = formData.get('player')
+            const difficulty = formData.get('difficulty')
+            const difficulty_to_ms = {
+                "Easy": 8,
+                "Medium": 5,
+                "Hard": 1
+            }
+            tick = setInterval(updateBall, difficulty_to_ms[difficulty])
+            player_html = '<div>Player: ' + player + '</div><br><div>Difficulty: ' + difficulty + '</div>'
+            document.getElementById('playerBoard').innerHTML = player_html + '<div>Your score: 0</div>'
+        }
+        function setDirs(left, top) {
+            if (left >= 600 - 26) {
+                xdir = false
+            } else if (left <= 0) {
+                xdir = true
+            }
+            if (top >= 600 - 26) {
+                ydir = false
+            } else if (top <= 0) {
+                ydir = true
+            }
+        }
+
+        function onPaddleMove(event) {
+            main = document.getElementById('main').getBoundingClientRect()
+            paddle_left_edge = event.screenX - main.left - 36
+            if (paddle_left_edge < 0) {
+                paddle_left_edge = 0
+            }
+            if (paddle_left_edge > 600 - 72) {
+                paddle_left_edge = 600 - 72
+            }
+            paddle.style.left = paddle_left_edge + 'px'
+        }
+
+        function getDeltas(left, top) {
+            const dx = xdir ? left + 1 : left - 1
+            const dy = ydir ? top + 1 : top - 1
+            return [dx, dy]
+        }
+
+        function hits(a, b) {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+
+            return Math.max(ar.left, br.left) <= Math.min(ar.right, br.right) && Math.max(ar.top, br.top) <= Math.min(ar.bottom, br.bottom);
+        }
+
+        function hasCollidedWithPaddle(left, top) {
+            const ballRect = ball.getBoundingClientRect()
+            const paddleRect = paddle.getBoundingClientRect()
+            if (ballRect.y + 26 > paddleRect.y
+                && ballRect.x >= paddleRect.x
+                && ballRect.x + 26 <= paddleRect.x + 72) {
+                ydir = false
+            } else if (ballRect.y == 787) {
+                clearInterval(tick)
+                counter = 0
+                document.getElementById('playerBoard').innerHTML = player_html + '<div>You lost :(</div>'
+            }
+        }
+
+        function hasCollidedWithBlock(left, top) {
+            for (block of document.getElementsByClassName('block')) {
+                if (block.style.display == 'None') {
+                    continue
+                }
+
+                if (hits(block, ball)) {
+                    block.style.display = 'None';
+                    ydir = !ydir;
+                    counter += 1
+                    document.getElementById('playerBoard').innerHTML = player_html + '<div>Your score: ' + counter + '</div>'
+                }
+            }
+        }
+
+        function updateBall() {
+            setDirs(ball.offsetLeft, ball.offsetTop)
+            hasCollidedWithPaddle(ball.offsetLeft, ball.offsetTop)
+            hasCollidedWithBlock(ball.offsetLeft, ball.offsetTop)
+            const [dx, dy] = getDeltas(ball.offsetLeft, ball.offsetTop)
+            ball.style.left = dx + 'px'
+            ball.style.top = dy + 'px'
+        }
+    </script>
+</body>
+
+</html>
